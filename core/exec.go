@@ -1,9 +1,10 @@
 package core
 
 import (
-	"fmt"
+	"errors"
+	//"fmt"
 	"io"
-	"log"
+	//"log"
 	"os"
 	"os/exec"
 	"sync"
@@ -23,7 +24,6 @@ func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {
 			}
 		}
 		if err != nil {
-			// Read returns io.EOF at the end of file, which is not an error for us
 			if err == io.EOF {
 				err = nil
 			}
@@ -32,20 +32,16 @@ func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {
 	}
 }
 
-func Execute(path string, args []string) string {
+func Execute(path string, args []string) (string, error) {
 	cmd := exec.Command(path, args...)
 	var stdout, stderr []byte
-	var errStdout, errStderr error
+	var errStdout error
 	stdoutIn, _ := cmd.StdoutPipe()
-	stderrIn, _ := cmd.StderrPipe()
+	//stderrIn, _ := cmd.StderrPipe()
 	err := cmd.Start()
 	if err != nil {
-		log.Fatalf("cmd.Start() failed with '%s'\n", err)
+		return "", err
 	}
-
-	// cmd.Wait() should be called only after we finish reading
-	// from stdoutIn and stderrIn.
-	// wg ensures that we finish
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -53,18 +49,16 @@ func Execute(path string, args []string) string {
 		wg.Done()
 	}()
 
-	stderr, errStderr = copyAndCapture(os.Stderr, stderrIn)
+	//stderr, errStderr = copyAndCapture(os.Stderr, stderrIn)
 
 	wg.Wait()
 
 	err = cmd.Wait()
 	if err != nil {
-		log.Fatalf("cmd.Run() failed with %s\n", err)
+		return "", err
 	}
-	if errStdout != nil || errStderr != nil {
-		log.Fatal("failed to capture stdout or stderr\n")
-	}
-	outStr, errStr := string(stdout), string(stderr)
-	fmt.Printf("\nout:\n%s\nerr:\n%s\n", outStr, errStr)
-	return "DONE"
+	//if errStdout != nil || errStderr != nil {
+	//	return "", errors.New("Empty stdout")
+	//}
+	return string(stdout), errors.New(string(stderr))
 }

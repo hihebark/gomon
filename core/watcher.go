@@ -1,15 +1,15 @@
 package core
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/fsnotify/fsnotify"
 )
 
-func Watcher() {
+func Watcher(path string) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer watcher.Close()
 
@@ -21,22 +21,23 @@ func Watcher() {
 				if !ok {
 					return
 				}
-				log.Println("event:", event)
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Println("modified file:", event.Name)
+					if string(event.Op) != "Chmod" {
+						fmt.Printf("New Event %s, %v\n", event.Name, event.Op)
+					}
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Println("error:", err)
+				fmt.Printf("ERROR: %v\n", err)
 			}
 		}
 	}()
-
-	err = watcher.Add(".")
+	err = watcher.Add(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	<-done
+	return nil
 }
