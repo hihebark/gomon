@@ -33,11 +33,11 @@ func NewRule() *Rule {
 		Events:      Event{},
 	}
 }
-func NewRuleFromFile(body string) (Rule, error) {
-	rule := Rule{}
-	err := json.Unmarshal([]byte(body), &rule)
+func NewRuleFromFile(body string) (*Rule, error) {
+	rule := &Rule{}
+	err := json.Unmarshal([]byte(body), rule)
 	if err != nil {
-		return rule, err
+		return nil, err
 	}
 	return rule, nil
 }

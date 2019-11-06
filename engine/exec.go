@@ -1,4 +1,4 @@
-package core
+package engine
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-func copyAndCapture(w io.Writer, r io.Reader) ([]byte, error) {
+func capture(w io.Writer, r io.Reader) ([]byte, error) {
 	var out []byte
 	buf := make([]byte, 1024, 1024)
 	for {
@@ -37,7 +37,6 @@ func Execute(path string, args []string) (string, error) {
 	var stdout, stderr []byte
 	var errStdout error
 	stdoutIn, _ := cmd.StdoutPipe()
-	//stderrIn, _ := cmd.StderrPipe()
 	err := cmd.Start()
 	if err != nil {
 		return "", err
@@ -45,20 +44,13 @@ func Execute(path string, args []string) (string, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		stdout, errStdout = copyAndCapture(os.Stdout, stdoutIn)
+		stdout, errStdout = capture(os.Stdout, stdoutIn)
 		wg.Done()
 	}()
-
-	//stderr, errStderr = copyAndCapture(os.Stderr, stderrIn)
-
 	wg.Wait()
-
 	err = cmd.Wait()
 	if err != nil {
 		return "", err
 	}
-	//if errStdout != nil || errStderr != nil {
-	//	return "", errors.New("Empty stdout")
-	//}
 	return string(stdout), errors.New(string(stderr))
 }

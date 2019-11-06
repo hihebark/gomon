@@ -1,4 +1,4 @@
-package core
+package engine
 
 import (
 	"io/ioutil"
@@ -19,4 +19,13 @@ func ReadFile(path string) (string, error) {
 		return "", err
 	}
 	return string(content), nil
+}
+
+func FileExists(fileName string) bool {
+	if _, err := os.Stat(fileName); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }

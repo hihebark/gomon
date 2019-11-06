@@ -1,0 +1,6 @@
+github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
+github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
+github.com/hihebark/gomon v0.0.0-20191103092751-6ec22a01f6f5 h1:jhiKYoGUg8ljERByBndFUDcoeGDh1H4Lhl4kybmkoYU=
+github.com/hihebark/gomon v0.0.0-20191103092751-6ec22a01f6f5/go.mod h1:vO0KK6J7IJVjNik4/KMLipkN5k/pBsx97/Ug0XH+0gs=
+golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd h1:3x5uuvBgE6oaXJjCOvpCC1IpgJogqQ+PqGGU3ZxAgII=
+golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
