@@ -2,20 +2,26 @@ package observer
 
 import (
 	"fmt"
+	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/hihebark/gomon/engine"
 	"github.com/hihebark/gomon/rule"
 )
 
 type Observer struct {
 	sync.Mutex
 	rule rule.Rule
+	args []string
+	cmd  *exec.Cmd
 }
 
-func NewObserver(rule rule.Rule) *Observer {
+func NewObserver(rule rule.Rule, args []string) *Observer {
 	return &Observer{
 		rule: rule,
+		args: args,
 	}
 }
 
@@ -30,7 +36,16 @@ func (o *Observer) Start() {
 			}
 		}
 	}()
-	fmt.Printf("\033[31m\033[1m[gomon]\033[0m starting `%s`\n", o.rule.ExecCommand)
+	///.command := o.rule.ExecCommand
+	///.if len(o.args) != 0 {
+	///.	command = strings.Join(o.args, " ")
+	///.}
+	///.fmt.Printf("\033[31m\033[1m[gomon]\033[0m starting `%s`\n", command)
+	///.cmd, err := engine.ExecuteAndCapture("go", []string{"run", "main.go"})
+	///.if err != nil {
+	///.	fmt.Printf("[ERROR] While runnig this command %s\n", command)
+	///.}
+	///.o.cmd = cmd
 	if err := o.observe(); err != nil {
 		fmt.Printf("[ERROR] While watching for change:\n%v\n", err)
 	}
@@ -38,7 +53,14 @@ func (o *Observer) Start() {
 
 func (o *Observer) restart() {
 	fmt.Println("\033[31m\033[1m[gomon]\033[0m restarting due to changes...")
+	err := engine.KillCommand(o.cmd)
+	if err != nil {
+		fmt.Printf("[ERROR] While killing the %v %v\n", o.cmd.Args, err)
+	}
 	// check if there is commande on restart.
+	//if o.rule.Events.OnRestart != "" {
+	//
+	//}
 }
 
 func (o *Observer) exit() {
@@ -82,8 +104,7 @@ func (o *Observer) observe() error {
 			}
 		}
 	}()
-	o.addPaths(watcher)
-	err = watcher.Add(o.rule.Watch)
+	err = o.addPaths(watcher)
 	if err != nil {
 		return err
 	}
@@ -91,8 +112,17 @@ func (o *Observer) observe() error {
 	return nil
 }
 
-func (o *Observer) addPaths(watcher *fsnotify.Watcher) {
-	for _, v := range o.rule.Ignore {
-		fmt.Printf("Ignoring: %s\n", v)
+func (o *Observer) addPaths(watcher *fsnotify.Watcher) error {
+	if o.rule.Watch == "*.*" {
+		err := watcher.Add(".")
+		return err
+	} else {
+		for _, v := range strings.Split(o.rule.Watch, ",") {
+			err := watcher.Add(v)
+			if err != nil {
+				return err
+			}
+		}
 	}
+	return nil
 }

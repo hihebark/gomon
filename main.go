@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/hihebark/gomon/engine"
 	"github.com/hihebark/gomon/observer"
@@ -25,5 +26,5 @@ func main() {
 	}
 	fmt.Printf("\033[31m\033[1m[gomon]\033[0m to restart at any time, enter `%s`\n", mrule.Restartable)
 	fmt.Printf("\033[31m\033[1m[gomon]\033[0m watching dir(s): %s\n", mrule.Watch)
-	observer.NewObserver(*mrule).Start()
+	observer.NewObserver(*mrule, os.Args).Start()
 }
