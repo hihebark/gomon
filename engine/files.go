@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// ReadFile function
 func ReadFile(path string) (string, error) {
 	if _, err := os.Stat(path); os.IsExist(err) {
 		return "", err
@@ -21,6 +22,7 @@ func ReadFile(path string) (string, error) {
 	return string(content), nil
 }
 
+// FileExists function
 func FileExists(fileName string) bool {
 	if _, err := os.Stat(fileName); err != nil {
 		if os.IsNotExist(err) {

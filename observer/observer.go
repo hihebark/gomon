@@ -2,7 +2,10 @@ package observer
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/hihebark/gomon/rule"
 )
 
+// Observer struct
 type Observer struct {
 	sync.Mutex
 	rule rule.Rule
@@ -18,6 +22,7 @@ type Observer struct {
 	cmd  *exec.Cmd
 }
 
+// NewObserver create new observer
 func NewObserver(rule rule.Rule, args []string) *Observer {
 	return &Observer{
 		rule: rule,
@@ -25,6 +30,7 @@ func NewObserver(rule rule.Rule, args []string) *Observer {
 	}
 }
 
+// Start the observer
 func (o *Observer) Start() {
 	userStdIn := make(chan string)
 	go read(userStdIn)
@@ -36,16 +42,16 @@ func (o *Observer) Start() {
 			}
 		}
 	}()
-	///.command := o.rule.ExecCommand
-	///.if len(o.args) != 0 {
-	///.	command = strings.Join(o.args, " ")
-	///.}
-	///.fmt.Printf("\033[31m\033[1m[gomon]\033[0m starting `%s`\n", command)
-	///.cmd, err := engine.ExecuteAndCapture("go", []string{"run", "main.go"})
-	///.if err != nil {
-	///.	fmt.Printf("[ERROR] While runnig this command %s\n", command)
-	///.}
-	///.o.cmd = cmd
+	command := o.rule.ExecCommand
+	if len(o.args) != 0 {
+		command = strings.Join(o.args, " ")
+	}
+	fmt.Printf("\033[31m\033[1m[gomon]\033[0m starting `%s`\n", command)
+	cmd, err := engine.ExecuteAndCapture("go", []string{"run", "main.go"})
+	if err != nil {
+		fmt.Printf("[ERROR] While runnig this command %s\n", command)
+	}
+	o.cmd = cmd
 	if err := o.observe(); err != nil {
 		fmt.Printf("[ERROR] While watching for change:\n%v\n", err)
 	}
@@ -58,9 +64,9 @@ func (o *Observer) restart() {
 		fmt.Printf("[ERROR] While killing the %v %v\n", o.cmd.Args, err)
 	}
 	// check if there is commande on restart.
-	//if o.rule.Events.OnRestart != "" {
-	//
-	//}
+	if o.rule.Events.OnRestart != "" {
+		fmt.Println(o.rule.Events.OnRestart)
+	}
 }
 
 func (o *Observer) exit() {
@@ -112,16 +118,35 @@ func (o *Observer) observe() error {
 	return nil
 }
 
+func isEqual(str string, arr []string) bool {
+	for _, val := range arr {
+		if val == str {
+			return true
+		}
+	}
+	return false
+}
+
 func (o *Observer) addPaths(watcher *fsnotify.Watcher) error {
 	if o.rule.Watch == "*.*" {
-		err := watcher.Add(".")
-		return err
-	} else {
-		for _, v := range strings.Split(o.rule.Watch, ",") {
-			err := watcher.Add(v)
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		return filepath.Walk(".", func(fp string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
+			if !info.IsDir() && isEqual(filepath.Ext(info.Name()), o.rule.Ext) {
+				return watcher.Add(path.Join(wd, fp))
+			}
+			return nil
+		})
+	}
+	for _, v := range strings.Split(o.rule.Watch, ",") {
+		err := watcher.Add(v)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

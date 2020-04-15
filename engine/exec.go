@@ -30,6 +30,7 @@ func capture(w io.Writer, r io.Reader) ([]byte, error) {
 	}
 }
 
+// ExecuteAndCapture function
 func ExecuteAndCapture(path string, args []string) (*exec.Cmd, error) {
 	cmd := exec.Command(path, args...)
 	var stdout /*, stderr*/ []byte
@@ -54,6 +55,7 @@ func ExecuteAndCapture(path string, args []string) (*exec.Cmd, error) {
 	//return string(stdout), errors.New(string(stderr))
 }
 
+// KillCommand function
 func KillCommand(c *exec.Cmd) error {
 	if err := c.Process.Kill(); err != nil {
 		return err
