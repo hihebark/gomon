@@ -14,6 +14,11 @@ import (
 	"github.com/hihebark/gomon/rule"
 )
 
+const (
+	// DefaultCmd contant
+	DefaultCmd string = "go run main.go"
+)
+
 // Observer struct
 type Observer struct {
 	sync.Mutex
@@ -36,41 +41,53 @@ func (o *Observer) Start() {
 	go read(userStdIn)
 	go func() {
 		select {
-		case restart := <-userStdIn:
-			if restart == o.rule.Restartable {
+		case cases := <-userStdIn:
+			if cases == o.rule.Restartable {
 				o.restart()
+			}
+			if cases == "exit" || cases == "stop" {
+				o.exit()
 			}
 		}
 	}()
-	command := o.rule.ExecCommand
-	if len(o.args) != 0 {
+	command := DefaultCmd
+	if len(o.args) > 1 {
 		command = strings.Join(o.args, " ")
+	} else if o.rule.ExecCommand != "" {
+		command = o.rule.ExecCommand
 	}
-	fmt.Printf("\033[31m\033[1m[gomon]\033[0m starting `%s`\n", command)
-	cmd, err := engine.ExecuteAndCapture("go", []string{"run", "main.go"})
+	c := strings.Split(command, " ")
+	fmt.Printf("\033[31m\033[1m[gomon]\033[0m starting `\033[1m%s\033[0m`\n", command)
+	go func() {
+		if err := o.observe(); err != nil {
+			fmt.Printf("[ERROR] While watching for change:\n%v\n", err)
+		}
+	}()
+	// Cant reach the cmd it still executing ....
+	cmd, err := engine.ExecuteAndCapture(c[0], c[1:])
 	if err != nil {
-		fmt.Printf("[ERROR] While runnig this command %s\n", command)
+		fmt.Printf("[ERROR] While runnig this command %s, %v\n", command, err)
 	}
 	o.cmd = cmd
-	if err := o.observe(); err != nil {
-		fmt.Printf("[ERROR] While watching for change:\n%v\n", err)
-	}
+	o.cmd.Wait()
 }
 
 func (o *Observer) restart() {
 	fmt.Println("\033[31m\033[1m[gomon]\033[0m restarting due to changes...")
 	err := engine.KillCommand(o.cmd)
 	if err != nil {
-		fmt.Printf("[ERROR] While killing the %v %v\n", o.cmd.Args, err)
+		fmt.Printf("[ERROR] App already finished %v\n", err)
 	}
 	// check if there is commande on restart.
 	if o.rule.Events.OnRestart != "" {
-		fmt.Println(o.rule.Events.OnRestart)
+		fmt.Println("OnRestart", o.rule.Events.OnRestart)
 	}
 }
 
 func (o *Observer) exit() {
 	// OnExit commande if none os.Exit(0)
+	fmt.Printf("\033[31m\033[1m[gomon]\033[0m Exiting...")
+	os.Exit(0)
 }
 
 func read(input chan<- string) {
@@ -100,7 +117,7 @@ func (o *Observer) observe() error {
 					return
 				}
 				if string(event.Op) != "" && string(event.Op) != "Chmod" {
-					fmt.Printf("New Event %s, %v\n", event.Name, event.Op)
+					o.restart()
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -118,7 +135,7 @@ func (o *Observer) observe() error {
 	return nil
 }
 
-func isEqual(str string, arr []string) bool {
+func contains(str string, arr []string) bool {
 	for _, val := range arr {
 		if val == str {
 			return true
@@ -137,8 +154,14 @@ func (o *Observer) addPaths(watcher *fsnotify.Watcher) error {
 			if err != nil {
 				return err
 			}
-			if !info.IsDir() && isEqual(filepath.Ext(info.Name()), o.rule.Ext) {
-				return watcher.Add(path.Join(wd, fp))
+			// add ignored folders and files
+			if !contains(info.Name(), o.rule.Ignore) {
+				if contains(filepath.Ext(info.Name()), o.rule.Ext) {
+					err := watcher.Add(path.Join(wd, fp))
+					if err != nil {
+						return err
+					}
+				}
 			}
 			return nil
 		})

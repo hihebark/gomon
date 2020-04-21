@@ -1,7 +1,6 @@
 package engine
 
 import (
-	//"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -33,8 +32,6 @@ func capture(w io.Writer, r io.Reader) ([]byte, error) {
 // ExecuteAndCapture function
 func ExecuteAndCapture(path string, args []string) (*exec.Cmd, error) {
 	cmd := exec.Command(path, args...)
-	var stdout /*, stderr*/ []byte
-	var errStdout error
 	stdoutIn, _ := cmd.StdoutPipe()
 	err := cmd.Start()
 	if err != nil {
@@ -43,22 +40,18 @@ func ExecuteAndCapture(path string, args []string) (*exec.Cmd, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		stdout, errStdout = capture(os.Stdout, stdoutIn)
+		_, _ = capture(os.Stdout, stdoutIn)
 		wg.Done()
 	}()
 	wg.Wait()
-	err = cmd.Wait()
-	if err != nil {
-		return cmd, err
-	}
 	return cmd, nil
-	//return string(stdout), errors.New(string(stderr))
+	//err = cmd.Wait()
+	//if err != nil {
+	//	return cmd, err
+	//}
 }
 
 // KillCommand function
-func KillCommand(c *exec.Cmd) error {
-	if err := c.Process.Kill(); err != nil {
-		return err
-	}
-	return nil
+func KillCommand(cmd *exec.Cmd) error {
+	return cmd.Process.Kill()
 }
