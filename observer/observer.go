@@ -68,7 +68,7 @@ func (o *Observer) Start() {
 	if err != nil {
 		fmt.Printf("[ERROR] While runnig this command %s, %v\n", command, err)
 	}
-	o.cmd = cmd
+	o.cmd = <-cmd
 	o.cmd.Wait()
 }
 

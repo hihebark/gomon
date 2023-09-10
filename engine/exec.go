@@ -30,12 +30,13 @@ func capture(w io.Writer, r io.Reader) ([]byte, error) {
 }
 
 // ExecuteAndCapture function
-func ExecuteAndCapture(path string, args []string) (*exec.Cmd, error) {
+func ExecuteAndCapture(path string, args []string) (<-chan *exec.Cmd, error) {
+	out := make(chan *exec.Cmd)
 	cmd := exec.Command(path, args...)
 	stdoutIn, _ := cmd.StdoutPipe()
 	err := cmd.Start()
 	if err != nil {
-		return cmd, err
+		return nil, err
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -44,7 +45,8 @@ func ExecuteAndCapture(path string, args []string) (*exec.Cmd, error) {
 		wg.Done()
 	}()
 	wg.Wait()
-	return cmd, nil
+	out <- cmd
+	return out, nil
 	//err = cmd.Wait()
 	//if err != nil {
 	//	return cmd, err
